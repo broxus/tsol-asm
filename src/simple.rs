@@ -11,19 +11,16 @@
 * limitations under the License.
 */
 
-use crate::simple_commands;
 use super::{
-    Units, CompileResult, CompileHandler, Engine, EnsureParametersCountInRange,
-    errors::ToOperationParameterError,
-    parse::*,
+    errors::ToOperationParameterError, parse::*, CompileHandler, CompileResult, Engine,
+    EnsureParametersCountInRange, Units,
 };
-
 use crate::debug::{DbgNode, DbgPos};
+use crate::simple_commands;
 
 // Compilation engine *********************************************************
 
 impl Engine {
-
     #[rustfmt::skip]
     simple_commands! {
         enumerate_simple_commands
@@ -701,7 +698,6 @@ impl Engine {
         STREF                                => 0xCC
         STREF2CONST                          => 0xCF, 0x21
         STREF3CONST                          => 0xCF, 0xE2
-        STREFCONST                           => 0xCF, 0x20
         STREFQ                               => 0xCF, 0x18
         STREFR                               => 0xCF, 0x14
         STREFRQ                              => 0xCF, 0x1C
@@ -956,7 +952,10 @@ impl Engine {
         RIST255_QMULBASE                      => 0xB7, 0xF9, 0x25
     }
 
-    fn add_commands<'a>(&mut self, iter: impl IntoIterator<Item = &'a (&'static str, CompileHandler)>) {
+    fn add_commands<'a>(
+        &mut self,
+        iter: impl IntoIterator<Item = &'a (&'static str, CompileHandler)>,
+    ) {
         // Add automatic commands
         for (command, handler) in iter {
             if self.handlers.insert(command, *handler).is_some() {
@@ -971,7 +970,7 @@ impl Engine {
 
         #[cfg(feature = "gosh")]
         self.add_commands(Self::enumerate_diff_commands());
-        
+
         #[cfg(feature = "groth")]
         self.add_commands(Self::enumerate_groth_commands());
 

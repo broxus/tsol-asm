@@ -11,12 +11,11 @@
  * limitations under the License.
  */
 
-use std::{error::Error, io::Write, process::ExitCode};
-
 use clap::Parser;
-
-use ever_assembler::{DbgInfo, Engine, Units};
-use ever_block::Cell;
+use tsol_asm::{DbgInfo, Engine, Units};
+use std::{error::Error, io::Write, process::ExitCode};
+use tycho_types::boc::Boc;
+use tycho_types::prelude::Cell;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -52,12 +51,11 @@ fn main_impl() -> Result<(), Box<dyn Error>> {
     for input in args.inputs {
         let code = std::fs::read_to_string(input.clone())?;
         engine.reset(input);
-        units = engine.compile_toplevel(&code)
-            .map_err(|e| e.to_string())?;
+        units = engine.compile_toplevel(&code).map_err(|e| e.to_string())?;
     }
     let (b, d) = units.finalize();
 
-    let c = b.into_cell()?;
+    let c = b.build()?;
     write_boc(&c, &output)?;
 
     let dbg = DbgInfo::from(c, d);
@@ -67,7 +65,7 @@ fn main_impl() -> Result<(), Box<dyn Error>> {
 }
 
 fn write_boc(cell: &Cell, output: &str) -> Result<(), Box<dyn Error>> {
-    let bytes = ever_block::write_boc(cell)?;
+    let bytes = Boc::encode(cell);
     let mut file = std::fs::File::create(output)?;
     file.write_all(&bytes)?;
     Ok(())

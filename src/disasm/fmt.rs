@@ -11,37 +11,48 @@
  * limitations under the License.
  */
 
-use ever_block::{Cell, Result, SliceData};
+use super::Result;
 use super::{
-    types::{Instruction, InstructionParameter, Code},
-    codedict::DelimitedHashmapE
+    codedict::DelimitedHashmapE,
+    types::{Code, Instruction, InstructionParameter},
 };
-
+use tycho_types::prelude::Cell;
+use tycho_vm::OwnedCellSlice;
 
 pub fn print_tree_of_cells(toc: &Cell) {
     fn print_tree_of_cells(cell: &Cell, prefix: String, last: bool) {
         let indent = if last { "└ " } else { "├ " };
-        let mut hex = cell.to_hex_string(true);
+        let mut hex: String = cell.display_data().to_string();
         if !hex.is_empty() {
             let mut first = true;
             let indent_next = if !last { "│ " } else { "  " };
             while hex.len() > 64 {
                 let tail = hex.split_off(64);
-                println!("{}{}{}…", prefix, if first { indent } else { indent_next }, hex);
+                println!(
+                    "{}{}{}…",
+                    prefix,
+                    if first { indent } else { indent_next },
+                    hex
+                );
                 hex = tail;
                 first = false;
             }
-            println!("{}{}{}", prefix, if first { indent } else { indent_next }, hex);
+            println!(
+                "{}{}{}",
+                prefix,
+                if first { indent } else { indent_next },
+                hex
+            );
         } else {
             println!("{}{}8_", prefix, indent);
         }
 
         let prefix_child = if last { "  " } else { "│ " };
         let prefix = prefix + prefix_child;
-        if cell.references_count() > 0 {
-            let last_child = cell.references_count() - 1;
-            for i in 0..cell.references_count() {
-                let child = cell.reference(i).unwrap();
+        if cell.reference_count() > 0 {
+            let last_child = cell.reference_count() - 1;
+            for i in 0..cell.reference_count() {
+                let child = cell.reference_cloned(i).unwrap();
                 print_tree_of_cells(&child, prefix.to_string(), i == last_child);
             }
         }
@@ -62,7 +73,7 @@ fn print_dictpushconst(insn: &Instruction, indent: &str) -> String {
         unreachable!()
     };
     let cell = if let Some(InstructionParameter::Cell { cell, collapsed }) = insn.params().get(1) {
-        assert!(collapsed == &false);
+        assert_eq!(collapsed, &false);
         cell.as_ref()
     } else {
         unreachable!()
@@ -85,14 +96,18 @@ fn print_cell(cell: &Cell, indent: &str, dot_cell: bool) -> String {
     if dot_cell {
         text += &format!("{}.cell ", indent);
     }
-    text += &format!("{{ ;; #{}\n", cell.repr_hash().to_hex_string());
+    text += &format!("{{ ;; #{}\n", hex::encode(cell.repr_hash().0));
     let inner_indent = String::from("  ") + indent;
-    if cell.bit_length() > 0 {
-        text += &format!("{}.blob x{}\n", inner_indent, cell.to_hex_string(true));
+    if cell.bit_len() > 0 {
+        text += &format!(
+            "{}.blob x{}\n",
+            inner_indent,
+            cell.display_data().to_string()
+        );
     }
-    let refs = cell.references_count();
+    let refs = cell.reference_count();
     for i in 0..refs {
-        text += &print_cell(&cell.reference(i).unwrap(), &inner_indent, true);
+        text += &print_cell(&cell.reference_cloned(i).unwrap(), &inner_indent, true);
     }
     text += &format!("{}}}", indent);
     if dot_cell {
@@ -108,12 +123,12 @@ fn truncate(s: String, n: usize) -> String {
     }
 }
 
-fn print_bytecode(slice: Option<(&SliceData, usize)>, bytecode_width: usize) -> String {
+fn print_bytecode(slice: Option<(&OwnedCellSlice, usize)>, bytecode_width: usize) -> String {
     let mut text = String::new();
     if bytecode_width > 0 {
         let mut bytecode = String::new();
         if let Some((slice, refs)) = slice {
-            let mut b = slice.to_hex_string();
+            let mut b = slice.apply().display_data().to_string();
             if refs > 0 {
                 b += &format!(" {{{}r}}", refs);
             }
@@ -135,11 +150,13 @@ impl Code {
                     "DICTPUSHCONST" | "PFXDICTSWITCH" => {
                         // TODO better improve assembler for these two insns
                         text += &print_dictpushconst(insn, indent);
-                        continue
+                        continue;
                     }
                     "IMPLICIT-JMP" => {
-                        if let Some(InstructionParameter::Code { code, cell }) = insn.params().first() {
-                            let hash = cell.as_ref().unwrap().repr_hash().to_hex_string();
+                        if let Some(InstructionParameter::Code { code, cell }) =
+                            insn.params().first()
+                        {
+                            let hash = hex::encode(cell.as_ref().unwrap().repr_hash().0);
                             text += &format!(".cell {{ ;; #{}\n", hash);
                             let inner_indent = String::from("  ") + indent;
                             text += &code.print(&inner_indent, full, bytecode_width);
@@ -148,9 +165,9 @@ impl Code {
                         } else {
                             unreachable!()
                         }
-                        continue
+                        continue;
                     }
-                    _ => ()
+                    _ => (),
                 }
             }
             text += insn.name();
@@ -167,7 +184,12 @@ impl Code {
     }
 }
 
-fn print_insn_params(params: &[InstructionParameter], indent: &str, full: bool, bytecode_width: usize) -> String {
+fn print_insn_params(
+    params: &[InstructionParameter],
+    indent: &str,
+    full: bool,
+    bytecode_width: usize,
+) -> String {
     use InstructionParameter::*;
 
     let mut text = String::new();
@@ -205,8 +227,8 @@ fn print_insn_params(params: &[InstructionParameter], indent: &str, full: bool, 
             }
             Slice(s) => {
                 // TODO slice may have references
-                debug_assert!(s.remaining_references() == 0);
-                text += &format!("x{}", s.to_hex_string());
+                debug_assert!(s.apply().size_refs() == 0);
+                text += &format!("x{}", s.apply().display_data().to_string());
             }
             StackRegister(r) => {
                 text += &format!("s{}", r);
@@ -220,7 +242,7 @@ fn print_insn_params(params: &[InstructionParameter], indent: &str, full: bool, 
             Code { code, cell } => {
                 if full {
                     if let Some(cell) = cell {
-                        text += &format!("{{ ;; #{}\n", cell.repr_hash().to_hex_string());
+                        text += &format!("{{ ;; #{}\n", hex::encode(cell.repr_hash().0));
                     } else {
                         text += "{\n";
                     }

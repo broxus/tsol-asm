@@ -11,9 +11,13 @@
 * limitations under the License.
 */
 
-use serde::{Serialize, ser::SerializeMap, Deserialize, de::{Error, MapAccess, Visitor}};
+use serde::{
+    de::{Error, MapAccess, Visitor},
+    ser::SerializeMap,
+    Deserialize, Serialize,
+};
 use std::collections::BTreeMap;
-use ever_block::{Cell, UInt256};
+use tycho_types::prelude::Cell;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DbgPos {
@@ -41,12 +45,12 @@ pub struct DbgNode {
 impl DbgNode {
     pub fn from_ext(pos: DbgPos, dbgs: Vec<DbgNode>) -> Self {
         Self {
-            offsets: vec!((0, pos)),
-            children: dbgs
+            offsets: vec![(0, pos)],
+            children: dbgs,
         }
     }
     pub fn from(pos: DbgPos) -> Self {
-        Self::from_ext(pos, vec!())
+        Self::from_ext(pos, vec![])
     }
     pub fn inline_node(&mut self, offset: usize, dbg: DbgNode) {
         for (o, p) in dbg.offsets {
@@ -73,7 +77,7 @@ impl std::fmt::Display for DbgNode {
 
 #[derive(Default, PartialEq, Eq)]
 pub struct DbgInfo {
-    map: BTreeMap<[u8; 32], BTreeMap<usize, DbgPos>>
+    map: BTreeMap<[u8; 32], BTreeMap<usize, DbgPos>>,
 }
 
 impl Serialize for DbgInfo {
@@ -90,13 +94,13 @@ impl Serialize for DbgInfo {
 }
 
 struct DbgInfoVisitor {
-    marker: std::marker::PhantomData<fn() -> DbgInfo>
+    marker: std::marker::PhantomData<fn() -> DbgInfo>,
 }
 
 impl DbgInfoVisitor {
     fn new() -> Self {
         Self {
-            marker: std::marker::PhantomData
+            marker: std::marker::PhantomData,
         }
     }
 }
@@ -115,8 +119,9 @@ impl<'a> Visitor<'a> for DbgInfoVisitor {
         let mut map = BTreeMap::<[u8; 32], BTreeMap<usize, DbgPos>>::new();
         while let Some((key, value)) = access.next_entry()? {
             let v = hex::decode::<String>(key).map_err(M::Error::custom)?;
-            let arr: [u8; 32] = v.try_into()
-                .map_err(|ev: Vec<u8>| M::Error::custom(format!("bytestring size must be 32 not {}", ev.len())))?;
+            let arr: [u8; 32] = v.try_into().map_err(|ev: Vec<u8>| {
+                M::Error::custom(format!("bytestring size must be 32 not {}", ev.len()))
+            })?;
             map.insert(arr, value);
         }
         Ok(DbgInfo { map })
@@ -126,7 +131,7 @@ impl<'a> Visitor<'a> for DbgInfoVisitor {
 impl<'a> Deserialize<'a> for DbgInfo {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'a>
+        D: serde::Deserializer<'a>,
     {
         deserializer.deserialize_map(DbgInfoVisitor::new())
     }
@@ -140,7 +145,9 @@ impl std::fmt::Debug for DbgInfo {
 
 impl DbgInfo {
     pub fn from(cell: Cell, node: DbgNode) -> Self {
-        let mut info = DbgInfo { map: BTreeMap::new() };
+        let mut info = DbgInfo {
+            map: BTreeMap::new(),
+        };
         info.collect(cell, node);
         info
     }
@@ -153,33 +160,33 @@ impl DbgInfo {
     pub fn append(&mut self, other: &mut Self) {
         self.map.append(&mut other.map);
     }
-    pub fn insert(&mut self, key: UInt256, tree: BTreeMap<usize, DbgPos>) {
-        self.map.entry(key.inner()).or_insert(tree);
+    pub fn insert(&mut self, key: [u8; 32], tree: BTreeMap<usize, DbgPos>) {
+        self.map.entry(key).or_insert(tree);
     }
-    pub fn remove(&mut self, key: &UInt256) -> Option<BTreeMap<usize, DbgPos>> {
-        self.map.remove(key.as_slice())
+    pub fn remove(&mut self, key: &[u8; 32]) -> Option<BTreeMap<usize, DbgPos>> {
+        self.map.remove(key)
     }
-    pub fn get(&self, key: &UInt256) -> Option<&BTreeMap<usize, DbgPos>> {
-        self.map.get(key.as_slice())
+    pub fn get(&self, key: &[u8; 32]) -> Option<&BTreeMap<usize, DbgPos>> {
+        self.map.get(key)
     }
     pub fn first_entry(&self) -> Option<&BTreeMap<usize, DbgPos>> {
         self.map.iter().next().map(|k_v| k_v.1)
     }
     fn collect(&mut self, cell: Cell, dbg: DbgNode) {
-        let mut stack = vec!((cell.clone(), dbg));
+        let mut stack = vec![(cell.clone(), dbg)];
         while let Some((cell, mut dbg)) = stack.pop() {
-            let hash = cell.repr_hash().inner();
+            let hash = cell.repr_hash().0;
             let offsets_len = dbg.offsets.len();
             self.map.insert(hash, dbg.offsets.into_iter().collect());
             debug_assert_eq!(Some(offsets_len), self.map.get(&hash).map(|v| v.len()));
-            for i in 0..cell.references_count() {
-                if i >= dbg.children.len() {
-                    continue
+            for i in 0..cell.reference_count() {
+                if i as usize >= dbg.children.len() {
+                    continue;
                 }
-                let child_cell = cell.reference(i).unwrap();
-                let child_hash = child_cell.repr_hash().inner();
+                let child_cell = cell.reference_cloned(i).unwrap();
+                let child_hash = child_cell.repr_hash().0;
                 if !self.map.contains_key(&child_hash) {
-                    let child_dbg = std::mem::take(&mut dbg.children[i]);
+                    let child_dbg = std::mem::take(&mut dbg.children[i as usize]);
                     stack.push((child_cell, child_dbg));
                 }
             }

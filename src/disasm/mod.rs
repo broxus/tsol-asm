@@ -11,20 +11,24 @@
  * limitations under the License.
  */
 
-use ever_block::{Result, SliceData};
 use self::loader::Loader;
+use tycho_types::prelude::CellSlice;
+
+pub type Result<T> = std::result::Result<T, anyhow::Error>;
 
 pub mod codedict;
+pub mod fmt;
 mod handlers;
 pub mod loader;
-pub mod fmt;
+#[cfg(test)]
+mod tests;
 pub mod types;
 
-pub fn disasm(slice: &mut SliceData) -> Result<String> {
+pub fn disasm(slice: &mut CellSlice) -> Result<String> {
     disasm_ex(slice, false)
 }
 
-pub fn disasm_ex(slice: &mut SliceData, collapsed: bool) -> Result<String> {
+pub fn disasm_ex(slice: &mut CellSlice, collapsed: bool) -> Result<String> {
     let mut loader = Loader::new(collapsed);
     let mut code = loader.load(slice, false)?;
     code.elaborate_dictpushconst_dictugetjmp();

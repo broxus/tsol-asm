@@ -26,22 +26,22 @@ macro_rules! simple_commands {
     (@resolve $command:ident => $($code:expr),+) => {
         #[allow(non_snake_case)]
         pub fn $command(
-            &mut self, 
-            par: &[&str], 
+            &mut self,
+            par: &[&str],
             destination: &mut Units,
             pos: DbgPos
         ) -> CompileResult {
             par.assert_empty()?;
             destination.write_command(&[$($code),*], DbgNode::from(pos))
-        }  
+        }
     };
 
     // parse command with any parameters
     (@resolve $command:ident $($pname:ident = $parser:ident);+ => $($code:expr),+) => {
         #[allow(non_snake_case)]
         pub fn $command(
-            &mut self, 
-            par: &[&str], 
+            &mut self,
+            par: &[&str],
             destination: &mut Units,
             pos: DbgPos
         ) -> CompileResult {

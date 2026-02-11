@@ -11,23 +11,26 @@
  * limitations under the License.
  */
 
+use super::Result;
+use crate::fail;
 use std::{collections::HashMap, slice::ChunksMut};
-use ever_block::{Cell, Result, /*Bitmask,*/ SliceData, fail};
+use tycho_types::prelude::Cell;
+use tycho_vm::OwnedCellSlice;
 
 #[derive(Debug, Default, Clone)]
 pub struct Code {
-    storage: Vec<Instruction>
+    storage: Vec<Instruction>,
 }
 
 impl Code {
     pub fn new() -> Self {
         Self {
-            storage: Vec::new()
+            storage: Vec::new(),
         }
     }
     pub fn single(insn: Instruction) -> Self {
         Self {
-            storage: vec!(insn)
+            storage: vec![insn],
         }
     }
     pub fn append(&mut self, other: &mut Self) {
@@ -36,13 +39,13 @@ impl Code {
     pub fn push(&mut self, insn: Instruction) {
         self.storage.push(insn)
     }
-    pub fn chunks_mut(&mut self, chunk_size: usize) -> ChunksMut<Instruction> {
+    pub fn chunks_mut(&mut self, chunk_size: usize) -> ChunksMut<'_, Instruction> {
         self.storage.chunks_mut(chunk_size)
     }
-    pub fn iter(&self) -> impl Iterator<Item = &Instruction>{
+    pub fn iter(&self) -> impl Iterator<Item = &Instruction> {
         self.storage.iter()
     }
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Instruction>{
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
         self.storage.iter_mut()
     }
 }
@@ -53,13 +56,20 @@ pub struct Instruction {
     params: Vec<InstructionParameter>,
     quiet: bool,
     comment: Option<String>,
-    bytecode: Option<SliceData>,
+    bytecode: Option<OwnedCellSlice>,
     refs: usize,
 }
 
 impl Instruction {
     pub fn new(name: &'static str) -> Self {
-        Self { name, params: vec!(), quiet: false, comment: None, bytecode: None, refs: 0 }
+        Self {
+            name,
+            params: vec![],
+            quiet: false,
+            comment: None,
+            bytecode: None,
+            refs: 0,
+        }
     }
     pub fn with_refs(self, refs: usize) -> Self {
         let mut clone = self;
@@ -94,10 +104,10 @@ impl Instruction {
     pub fn set_comment(&mut self, comment: String) {
         self.comment = Some(comment)
     }
-    pub fn bytecode(&self) -> Option<&SliceData> {
+    pub fn bytecode(&self) -> Option<&OwnedCellSlice> {
         self.bytecode.as_ref()
     }
-    pub fn set_bytecode(&mut self, bytecode: SliceData) {
+    pub fn set_bytecode(&mut self, bytecode: OwnedCellSlice) {
         self.bytecode = Some(bytecode);
     }
     pub fn refs(&self) -> usize {
@@ -109,14 +119,13 @@ impl Instruction {
 pub enum InstructionParameter {
     BigInteger(num::BigInt),
     ControlRegister(usize),
-    //DivisionMode(DivMode),
     Integer(isize),
     Length(usize),
     LengthAndIndex(usize, usize),
     Nargs(isize),
     Pargs(usize),
     Rargs(usize),
-    Slice(SliceData),
+    Slice(OwnedCellSlice),
     StackRegister(isize),
     StackRegisterPair(isize, isize),
     StackRegisterTriple(isize, isize, isize),
@@ -159,13 +168,22 @@ pub struct Shape {
 
 impl Shape {
     pub fn any() -> Shape {
-        Shape { kind: ShapeKind::Any, refs: vec![] }
+        Shape {
+            kind: ShapeKind::Any,
+            refs: vec![],
+        }
     }
     pub fn literal(cst: &'static str) -> Shape {
-        Shape { kind: ShapeKind::Literal(hex::decode(cst).expect("bad literal")), refs: vec![] }
+        Shape {
+            kind: ShapeKind::Literal(hex::decode(cst).expect("bad literal")),
+            refs: vec![],
+        }
     }
     pub fn var(name: &'static str) -> Shape {
-        Shape { kind: ShapeKind::Var(name), refs: vec![] }
+        Shape {
+            kind: ShapeKind::Var(name),
+            refs: vec![],
+        }
     }
     pub fn branch(self, node: Shape) -> Shape {
         let mut copy = self;
@@ -174,30 +192,28 @@ impl Shape {
     }
     pub fn captures(&self, cell: &Cell) -> Result<HashMap<&'static str, Cell>> {
         let mut map = HashMap::new();
-        let children = cell.references_count();
+        let children = cell.reference_count();
         match &self.kind {
-            ShapeKind::Any => {
-                return Ok(map)
-            }
+            ShapeKind::Any => return Ok(map),
             ShapeKind::Literal(data) => {
-                if cell.bit_length() != data.len() * 8 {
+                if cell.bit_len() as usize != data.len() * 8 {
                     fail!("data size doesn't match")
                 }
                 if &cell.data()[..data.len()] != data {
                     fail!("data doesn't match")
                 }
-                if self.refs.len() != children {
+                if self.refs.len() != children as usize {
                     fail!("number of children doesn't match")
                 }
             }
             ShapeKind::Var(name) => {
                 map.insert(*name, cell.clone());
-                return Ok(map)
+                return Ok(map);
             }
         }
         for i in 0..children {
-            let child = &cell.reference(i).unwrap();
-            map.extend(self.refs[i].captures(child)?.into_iter());
+            let child = &cell.reference_cloned(i).unwrap();
+            map.extend(self.refs[i as usize].captures(child)?.into_iter());
         }
         Ok(map)
     }
