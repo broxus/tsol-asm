@@ -11,11 +11,10 @@
  * limitations under the License.
  */
 
-use ever_block::{read_boc, write_boc, SliceData, Status};
-
 use crate::disasm::{disasm, fmt::print_tree_of_cells};
-
+use crate::{parse_hex_slice, Status};
 use similar::{ChangeTag, TextDiff};
+use tycho_types::prelude::Boc;
 
 fn cut_asm_hashes(asm: String) -> String {
     let mut out = String::new();
@@ -31,10 +30,10 @@ fn cut_asm_hashes(asm: String) -> String {
 
 fn round_trip_test(filename: &str, check_bin: bool) -> Status {
     let bin0 = &std::fs::read(filename)?;
-    let toc0 = read_boc(bin0)?.withdraw_single_root()?;
-    let mut asm0 = disasm(&mut SliceData::load_cell(toc0.clone())?)?;
+    let toc0 = Boc::decode(bin0)?;
+    let mut asm0 = disasm(&mut toc0.as_slice()?)?;
     let toc1 = crate::compile_code_to_cell(&asm0.clone()).unwrap();
-    let mut asm1 = disasm(&mut SliceData::load_cell(toc1.clone())?)?;
+    let mut asm1 = disasm(&mut toc1.as_slice()?)?;
 
     if !check_bin {
         asm0 = cut_asm_hashes(asm0);
@@ -53,13 +52,17 @@ fn round_trip_test(filename: &str, check_bin: bool) -> Status {
                 print!("+{}", change);
                 differ = true;
             }
-            _ => ()
+            _ => (),
         }
     }
-    assert!(!differ, "roundtrip difference was detected for {}", filename);
+    assert!(
+        !differ,
+        "roundtrip difference was detected for {}",
+        filename
+    );
 
     if check_bin {
-        let bin1 = write_boc(&toc1)?;
+        let bin1 = Boc::encode(&toc1);
         if bin0 != &bin1 {
             println!("{}", asm0);
             print_tree_of_cells(&toc0);
@@ -79,11 +82,11 @@ fn round_trip() {
     }
 }
 
-fn check_fragment(code: &str, text: &str) -> Status {
-    let builder = SliceData::from_string(code)?.as_builder();
-    let mut slice = SliceData::load_builder(builder)?;
+fn check_fragment(code: &str, expected_text: &str) -> Status {
+    let cell = parse_hex_slice(code)?;
+    let mut slice = cell.as_slice()?;
     let text_disasm = disasm(&mut slice)?;
-    assert_eq!(text, &text_disasm);
+    assert_eq!(&text_disasm, expected_text);
     Ok(())
 }
 
@@ -99,7 +102,10 @@ fn fragments() -> Status {
     check_fragment("8e81", "PUSHCONT {\n} ;; missing 8 bits and 1 ref\n")?;
     check_fragment("920000", "PUSHCONT {\n  NOP\n  NOP\n}\n")?;
     check_fragment("e300", "IFREF {\n  ;; missing cell\n}\n")?;
-    check_fragment("e30f", "IFREFELSEREF {\n  ;; missing cell\n}{\n  ;; missing cell\n}\n")?;
+    check_fragment(
+        "e30f",
+        "IFREFELSEREF {\n  ;; missing cell\n}{\n  ;; missing cell\n}\n",
+    )?;
     check_fragment("f4a420", "DICTPUSHCONST 32 ;; missing dict ref\n")?;
     check_fragment("ff77", "SETCP 119\n")?;
     Ok(())
@@ -108,17 +114,17 @@ fn fragments() -> Status {
 fn check_code(name: &str) -> Status {
     let inp = std::fs::read_to_string(format!("src/tests/disasm/{}.in", name))?;
     let out = std::fs::read_to_string(format!("src/tests/disasm/{}.out", name))?;
-    let mut code = crate::compile_code(&inp).unwrap();
-    let dis = disasm(&mut code)?;
+    let code = crate::compile_code_to_cell(&inp).unwrap();
+    let dis = disasm(&mut code.as_slice().unwrap())?;
     if dis == out {
-        return Ok(())
+        return Ok(());
     }
     let diff = TextDiff::from_lines(&out, &dis);
     for change in diff.iter_all_changes() {
         match change.tag() {
             ChangeTag::Delete => print!("-{}", change),
             ChangeTag::Insert => print!("+{}", change),
-            _ => ()
+            _ => (),
         }
     }
     panic!("check code failed")

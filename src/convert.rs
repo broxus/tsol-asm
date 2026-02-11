@@ -11,6 +11,10 @@
 * limitations under the License.
 */
 
+#[cfg(test)]
+#[path = "tests/test_convert.rs"]
+mod tests;
+
 use num::{bigint::Sign, BigInt};
 
 #[inline]
@@ -21,17 +25,17 @@ fn bits_to_bytes(length_in_bits: usize) -> usize {
 #[inline]
 fn bitsize(value: &BigInt) -> usize {
     if (value == &0.into()) || (value == &(-1).into()) {
-        return 1
+        return 1;
     }
     let res = value.bits() as usize;
     if value.sign() == Sign::Plus {
-        return res + 1
+        return res + 1;
     }
     // For negative values value.bits() returns correct result only when value is power of 2.
     let mut modpow2 = -value;
     modpow2 &= &modpow2 - 1;
     if modpow2.sign() == Sign::NoSign {
-        return res
+        return res;
     }
     res + 1
 }
@@ -44,7 +48,7 @@ fn bitsize(value: &BigInt) -> usize {
 pub fn to_big_endian_octet_string(value: &BigInt) -> Option<Vec<u8>> {
     let mut n = bitsize(value);
     if n > 257 {
-        return None
+        return None;
     }
     if n < 19 {
         n = 19;

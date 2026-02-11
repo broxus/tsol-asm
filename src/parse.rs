@@ -11,12 +11,12 @@
 * limitations under the License.
 */
 
+use super::errors::ParameterError;
 use num::Num;
 use std::{
     cmp::PartialOrd,
-    ops::{Bound, Range, RangeBounds}
+    ops::{Bound, Range, RangeBounds},
 };
-use super::errors::ParameterError;
 
 fn parse_range<T, R>(range: R) -> impl Fn(&str) -> Result<T, ParameterError>
 where
@@ -138,18 +138,20 @@ pub(super) fn parse_register(
         Err(ParameterError::UnexpectedType)
     } else {
         match register[1..].parse::<isize>() {
-            Ok(number) => if (number < range.start) || (number >= range.end) {
-                Err(ParameterError::OutOfRange)
-            } else {
-                Ok(number)
-            },
-            Err(_e) => Err(ParameterError::UnexpectedType)
+            Ok(number) => {
+                if (number < range.start) || (number >= range.end) {
+                    Err(ParameterError::OutOfRange)
+                } else {
+                    Ok(number)
+                }
+            }
+            Err(_e) => Err(ParameterError::UnexpectedType),
         }
     }
 }
 
 pub fn parse_slice(slice: &str, bits: usize) -> Result<Vec<u8>, ParameterError> {
-    if slice.chars().next().unwrap().to_ascii_uppercase() != 'X' {
+    if !slice.chars().next().unwrap().eq_ignore_ascii_case(&'X') {
         log::error!(target: "compile", "base not set");
         Err(ParameterError::UnexpectedType)
     } else {
@@ -157,7 +159,11 @@ pub fn parse_slice(slice: &str, bits: usize) -> Result<Vec<u8>, ParameterError> 
     }
 }
 
-pub fn parse_slice_base(slice: &str, mut bits: usize, base: u32) -> Result<Vec<u8>, ParameterError> {
+pub fn parse_slice_base(
+    slice: &str,
+    mut bits: usize,
+    base: u32,
+) -> Result<Vec<u8>, ParameterError> {
     debug_assert!(bits < 8, "it is offset to get slice parsed");
     let origin_bits = bits;
     let mut acc = 0u8;
@@ -211,7 +217,7 @@ pub fn parse_slice_base(slice: &str, mut bits: usize, base: u32) -> Result<Vec<u
         }
     } else if completion_tag {
         removing_trailing_zeroes();
-    } else  {
+    } else {
         data.push(0x80);
     }
     Ok(data)
@@ -230,14 +236,13 @@ pub(super) fn parse_stack_register_u4_minus_two(par: &str) -> Result<u8, Paramet
 }
 
 pub(super) fn parse_plduz_parameter(par: &str) -> Result<u8, ParameterError> {
-    (parse_range(32u16..=256))(par)
-        .and_then(|c| {
-            if c % 32 == 0 {
-                Ok(((c / 32) - 1) as u8)
-            } else {
-                Err(ParameterError::OutOfRange)
-            }
-        })
+    (parse_range(32u16..=256))(par).and_then(|c| {
+        if c % 32 == 0 {
+            Ok(((c / 32) - 1) as u8)
+        } else {
+            Err(ParameterError::OutOfRange)
+        }
+    })
 }
 
 pub(super) fn parse_string(arg: &str) -> Vec<u8> {
@@ -246,7 +251,7 @@ pub(super) fn parse_string(arg: &str) -> Vec<u8> {
         string.remove(0);
         let res = hex::decode(string);
         if let Ok(res) = res {
-            return res
+            return res;
         }
     }
     Vec::from(arg)

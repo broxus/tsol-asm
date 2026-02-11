@@ -1,4 +1,4 @@
-# Ever-assembler
+# TSOL-ASM
 
 Assembler and disassembler implementation
 
@@ -9,8 +9,8 @@ https://www.rust-lang.org/en-US/install.html
 ## Installing
 
 ```
-git clone https://github.com/everx-labs/ever-assembler.git
-cd ever-assembler
+git clone https://github.com/broxus/tsol-asm
+cd tsol-asm
 cargo build --release
 ```
 
