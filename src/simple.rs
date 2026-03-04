@@ -106,7 +106,6 @@ impl Engine {
         CONFIGPARAM                          => 0xF8, 0x32
         CONFIGOPTPARAM                       => 0xF8, 0x33
         CONS                                 => 0x6F, 0x02
-        COPYLEFT                             => 0xFB, 0x0A
         CTOS                                 => 0xD0
         DEC                                  => 0xA5
         DEBUG z = parse_const_u8_240         => 0xFE, z
@@ -257,9 +256,6 @@ impl Engine {
         EXPLODE c = parse_const_u4           => 0x6F, 0x40 | c
         EXPLODEVAR                           => 0x6F, 0x84
         FALSE                                => 0x70
-        FIND_BY_INIT_CODE_HASH               => 0xF9, 0x44
-        FIND_BY_CODE_HASH                    => 0xF9, 0x45
-        FIND_BY_DATA_HASH                    => 0xF9, 0x46
         FIRST                                => 0x6F, 0x10
         FITS z = parse_const_u8_plus_one     => 0xB4, z
         FITSX                                => 0xB6, 0x00
@@ -631,7 +627,6 @@ impl Engine {
         SECOND                               => 0x6F, 0x11
         SEMPTY                               => 0xC7, 0x00
         SENDRAWMSG                           => 0xFB, 0x00
-        SEQNO                                => 0xF8, 0x2D
         SETALTCTR z = parse_control_register => 0xED, 0x80 | z
         SETCODE                              => 0xFB, 0x04
         SETCONT z = parse_control_register   => 0xED, 0x60 | z
@@ -754,8 +749,6 @@ impl Engine {
         TRY                                  => 0xF2, 0xFF
         TRYARGS s1 = parse_const_u4;
                 s2 = parse_const_u4          => 0xF3, (s1 << 4 | s2)
-        TRYELECT                             => 0xF9, 0x50
-        TRYKEEP                              => 0xF2, 0xFE
         TUCK                                 => 0x66
         TUPLE s = parse_const_u4             => 0x6F, s
         TUPLEVAR                             => 0x6F, 0x80
@@ -816,29 +809,6 @@ impl Engine {
         ZEROSWAPIF2                          => 0x6F, 0x94
         ZEROSWAPIFNOT                        => 0x6F, 0x91
         ZEROSWAPIFNOT2                       => 0x6F, 0x95
-    }
-
-    #[cfg(feature = "gosh")]
-    simple_commands! {
-        enumerate_diff_commands
-        DIFF                                 => 0xC7, 0x14
-        DIFF_PATCH                           => 0xC7, 0x15
-        DIFF_PATCH_ZIP                       => 0xC7, 0x19
-        DIFF_PATCHQ                          => 0xC7, 0x20
-        DIFF_PATCH_ZIPQ                      => 0xC7, 0x21
-        DIFF_ZIP                             => 0xC7, 0x18
-        UNZIP                                => 0xC7, 0x17
-        ZIP                                  => 0xC7, 0x16
-        DIFF_PATCH_BINARY                    => 0xC7, 0x22
-        DIFF_PATCH_BINARY_ZIP                => 0xC7, 0x23
-        DIFF_PATCH_BINARYQ                   => 0xC7, 0x24
-        DIFF_PATCH_BINARY_ZIPQ               => 0xC7, 0x25
-    }
-
-    #[cfg(feature = "groth")]
-    simple_commands! {
-        enumerate_groth_commands
-        VERGRTH16                            => 0xF9, 0x12
     }
 
     simple_commands! {
@@ -967,15 +937,7 @@ impl Engine {
     /// Add automatic commands
     pub fn add_simple_commands(&mut self) {
         self.add_commands(Self::enumerate_simple_commands());
-
-        #[cfg(feature = "gosh")]
-        self.add_commands(Self::enumerate_diff_commands());
-
-        #[cfg(feature = "groth")]
-        self.add_commands(Self::enumerate_groth_commands());
-
         self.add_commands(Self::enumerate_bls_commands());
-
         self.add_commands(Self::enumerate_ton_commands());
     }
 }
