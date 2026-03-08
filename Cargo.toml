@@ -20,7 +20,3 @@ tycho-vm = "0.3.2"
 
 [dev-dependencies]
 similar = '2.2.0'
-
-[features]
-gosh = [  ]
-groth = [  ]
