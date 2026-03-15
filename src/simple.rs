@@ -295,7 +295,6 @@ impl Engine {
         INDEX3 i = parse_const_u2;
                j = parse_const_u2;
                k = parse_const_u2            => 0x6F, 0xC0 | (i << 4) | (j << 2) | k
-        INITCODEHASH                         => 0xF8, 0x2B
         ISNAN                                => 0xC4
         ISNEG                                => 0xC1, 0x00
         ISNPOS                               => 0xC1, 0x01
@@ -350,7 +349,6 @@ impl Engine {
         LDVARUINT16                          => 0xFA, 0x00
         LDVARUINT32                          => 0xFA, 0x04
         LDZEROES                             => 0xD7, 0x60
-        LDCONT                               => 0xD7, 0x66
         LEQ                                  => 0xBB
         LESS                                 => 0xB9
         LESSINT z = parse_const_i8           => 0xC1, z
@@ -687,7 +685,6 @@ impl Engine {
         STONE                                => 0xCF, 0x83
         STONES                               => 0xCF, 0x41
         STOPTREF                             => 0xF4, 0x00
-        STORAGEFEE                           => 0xF8, 0x2C
         STRDUMP                              => 0xFE, 0x14
         STRPRINT                             => 0xFE, 0x15
         STREF                                => 0xCC
@@ -717,7 +714,6 @@ impl Engine {
         STVARUINT32                          => 0xFA, 0x06
         STZERO                               => 0xCF, 0x81
         STZEROES                             => 0xCF, 0x40
-        STCONT                               => 0xCF, 0x43
         SUB                                  => 0xA1
         SUBDICTGET                           => 0xF4, 0xB1
         SUBDICTIGET                          => 0xF4, 0xB2
@@ -841,85 +837,101 @@ impl Engine {
 
     simple_commands! {
         enumerate_ton_commands
-
-        GASCONSUMED                          => 0xF8, 0x07
-        SENDMSG                              => 0xFB, 0x08
-        INCOMINGVALUE                        => 0xF8, 0x2B
-        STORAGEFEES                          => 0xF8, 0x2C
-        DUEPAYMENT                           => 0xF8, 0x2F
-        GETGASFEE                            => 0xF8, 0x36
-        GETSTORAGEFEE                        => 0xF8, 0x37
-        GETFORWARDFEE                        => 0xF8, 0x38
-        GETPRECOMPILEDGAS                    => 0xF8, 0x39
-        GETORIGINALFWDFEE                    => 0xF8, 0x3A
-        GETGASFEESIMPLE                      => 0xF8, 0x3B
-        GETFORWARDFEESIMPLE                  => 0xF8, 0x3C
-
-        MULADDDIVMOD                         => 0xA9, 0x80
-        MULADDDIVMODR                        => 0xA9, 0x81
-        MULADDDIVMODC                        => 0xA9, 0x82
-        QMULADDDIVMOD                        => 0xB7, 0xA9, 0x80
-        QMULADDDIVMODR                       => 0xB7, 0xA9, 0x81
-        QMULADDDIVMODC                       => 0xB7, 0xA9, 0x82
-
         ADDDIVMOD                             => 0xA9, 0x00
-        ADDDIVMODR                            => 0xA9, 0x01
         ADDDIVMODC                            => 0xA9, 0x02
-        QADDDIVMOD                            => 0xB7, 0xA9, 0x00
-        QADDDIVMODR                           => 0xB7, 0xA9, 0x01
-        QADDDIVMODC                           => 0xB7, 0xA9, 0x02
-
+        ADDDIVMODR                            => 0xA9, 0x01
         ADDRSHIFTMOD                          => 0xA9, 0x20
-        ADDRSHIFTMODR                         => 0xA9, 0x21
         ADDRSHIFTMODC                         => 0xA9, 0x22
-        QADDRSHIFTMOD                         => 0xB7, 0xA9, 0x20
-        QADDRSHIFTMODR                        => 0xB7, 0xA9, 0x21
-        QADDRSHIFTMODC                        => 0xB7, 0xA9, 0x22
-
-        MULADDRSHIFTMOD                       => 0xA9, 0xA0
-        MULADDRSHIFTRMOD                      => 0xA9, 0xA1
-        MULADDRSHIFTCMOD                      => 0xA9, 0xA2
-        QMULADDRSHIFTMOD                      => 0xB7, 0xA9, 0xA0
-        QMULADDRSHIFTRMOD                     => 0xB7, 0xA9, 0xA1
-        QMULADDRSHIFTCMOD                     => 0xB7, 0xA9, 0xA2
-
-        LSHIFTADDDIVMOD                       => 0xA9, 0xC0
-        LSHIFTADDDIVMODR                      => 0xA9, 0xC1
-        LSHIFTADDDIVMODC                      => 0xA9, 0xC2
-        QLSHIFTADDDIVMOD                      => 0xB7, 0xA9, 0xC0
-        QLSHIFTADDDIVMODR                     => 0xB7, 0xA9, 0xC1
-        QLSHIFTADDDIVMODC                     => 0xB7, 0xA9, 0xC2
-
-        HASHEXT_SHA256                        => 0xF9, 0x04, 0x00
-        HASHEXT_SHA512                        => 0xF9, 0x04, 0x01
-        HASHEXT_BLAKE2B                       => 0xF9, 0x04, 0x02
-        HASHEXT_KECCAK256                     => 0xF9, 0x04, 0x03
-        HASHEXT_KECCAK512                     => 0xF9, 0x04, 0x04
-
+        ADDRSHIFTMODR                         => 0xA9, 0x21
+        DUEPAYMENT                            => 0xF8, 0x2F
         ECRECOVER                             => 0xF9, 0x12
-
-        HASHEXTA_SHA256                       => 0xF9, 0x06, 0x00
-        HASHEXTA_SHA512                       => 0xF9, 0x06, 0x01
+        GASCONSUMED                           => 0xF8, 0x07
+        GETFORWARDFEE                         => 0xF8, 0x38
+        GETFORWARDFEESIMPLE                   => 0xF8, 0x3C
+        GETGASFEE                             => 0xF8, 0x36
+        GETGASFEESIMPLE                       => 0xF8, 0x3B
+        GETORIGINALFWDFEE                     => 0xF8, 0x3A
+        GETPRECOMPILEDGAS                     => 0xF8, 0x39
+        GETSTORAGEFEE                         => 0xF8, 0x37
+        GLOBALID                              => 0xF8, 0x35
         HASHEXTA_BLAKE2B                      => 0xF9, 0x06, 0x02
         HASHEXTA_KECCAK256                    => 0xF9, 0x06, 0x03
         HASHEXTA_KECCAK512                    => 0xF9, 0x06, 0x04
-
-        P256_CHKSIGNU                         => 0xF9, 0x14
+        HASHEXTA_SHA256                       => 0xF9, 0x06, 0x00
+        HASHEXTA_SHA512                       => 0xF9, 0x06, 0x01
+        HASHEXT_BLAKE2B                       => 0xF9, 0x04, 0x02
+        HASHEXT_KECCAK256                     => 0xF9, 0x04, 0x03
+        HASHEXT_KECCAK512                     => 0xF9, 0x04, 0x04
+        HASHEXT_SHA256                        => 0xF9, 0x04, 0x00
+        HASHEXT_SHA512                        => 0xF9, 0x04, 0x01
+        INCOMINGVALUE                         => 0xF8, 0x2B
+        LSHIFTADDDIVMOD                       => 0xA9, 0xC0
+        LSHIFTADDDIVMODC                      => 0xA9, 0xC2
+        LSHIFTADDDIVMODR                      => 0xA9, 0xC1
+        MULADDDIVMOD                          => 0xA9, 0x80
+        MULADDDIVMODC                         => 0xA9, 0x82
+        MULADDDIVMODR                         => 0xA9, 0x81
+        MULADDRSHIFTCMOD                      => 0xA9, 0xA2
+        MULADDRSHIFTMOD                       => 0xA9, 0xA0
+        MULADDRSHIFTRMOD                      => 0xA9, 0xA1
         P256_CHKSIGNS                         => 0xF9, 0x15
-
-        RIST255_FROMHASH                      => 0xF9, 0x20
-        RIST255_VALIDATE                      => 0xF9, 0x21
+        P256_CHKSIGNU                         => 0xF9, 0x14
+        PREVBLOCKSINFOTUPLE                   => 0xF8, 0x2D
+        PREVKEYBLOCK                          => 0xF8, 0x34, 0x01
+        PREVMCBLOCKS                          => 0xF8, 0x34, 0x00
+        PREVMCBLOCKS_100                      => 0xF8, 0x34, 0x02
+        QADDDIVMOD                            => 0xB7, 0xA9, 0x00
+        QADDDIVMODC                           => 0xB7, 0xA9, 0x02
+        QADDDIVMODR                           => 0xB7, 0xA9, 0x01
+        QADDRSHIFTMOD                         => 0xB7, 0xA9, 0x20
+        QADDRSHIFTMODC                        => 0xB7, 0xA9, 0x22
+        QADDRSHIFTMODR                        => 0xB7, 0xA9, 0x21
+        QLSHIFTADDDIVMOD                      => 0xB7, 0xA9, 0xC0
+        QLSHIFTADDDIVMODC                     => 0xB7, 0xA9, 0xC2
+        QLSHIFTADDDIVMODR                     => 0xB7, 0xA9, 0xC1
+        QMULADDDIVMOD                         => 0xB7, 0xA9, 0x80
+        QMULADDDIVMODC                        => 0xB7, 0xA9, 0x82
+        QMULADDDIVMODR                        => 0xB7, 0xA9, 0x81
+        QMULADDRSHIFTCMOD                     => 0xB7, 0xA9, 0xA2
+        QMULADDRSHIFTMOD                      => 0xB7, 0xA9, 0xA0
+        QMULADDRSHIFTRMOD                     => 0xB7, 0xA9, 0xA1
         RIST255_ADD                           => 0xF9, 0x22
-        RIST255_SUB                           => 0xF9, 0x23
+        RIST255_FROMHASH                      => 0xF9, 0x20
         RIST255_MUL                           => 0xF9, 0x24
         RIST255_MULBASE                       => 0xF9, 0x25
         RIST255_PUSHL                         => 0xF9, 0x26
-
-        RIST255_QVALIDATE                     => 0xB7, 0xF9, 0x21
         RIST255_QADD                          => 0xB7, 0xF9, 0x22
-        RIST255_QSUB                          => 0xB7, 0xF9, 0x23
         RIST255_QMUL                          => 0xB7, 0xF9, 0x24
         RIST255_QMULBASE                      => 0xB7, 0xF9, 0x25
+        RIST255_QSUB                          => 0xB7, 0xF9, 0x23
+        RIST255_QVALIDATE                     => 0xB7, 0xF9, 0x21
+        RIST255_SUB                           => 0xF9, 0x23
+        RIST255_VALIDATE                      => 0xF9, 0x21
+        SENDMSG                               => 0xFB, 0x08
+        STORAGEFEES                           => 0xF8, 0x2C
+        UNPACKEDCONFIGTUPLE                   => 0xF8, 0x2E
+        CLEVEL                                => 0xD7, 0x66
+        CLEVELMASK                            => 0xD7, 0x67
+        CHASHI i = parse_const_u4             => 0xd7, 0x68 | i
+        CDEPTHI i = parse_const_u4            => 0xD7, 0x6C | i
+        CHASHIX                               => 0xD7, 0x70
+        CDEPTHIX                              => 0xD7, 0x71
+        SECP256K1_XONLY_PUBKEY_TWEAK_ADD      => 0xF9, 0x13
+
+        INMSG_BOUNCE                          => 0xf8, 0x90
+        INMSG_BOUNCED                         => 0xf8, 0x91
+        INMSG_FWDFEE                          => 0xf8, 0x93
+        INMSG_LT                              => 0xf8, 0x94
+        INMSG_ORIGVALUE                       => 0xf8, 0x96
+        INMSG_SRC                             => 0xf8, 0x92
+        INMSG_STATEINIT                       => 0xf8, 0x99
+        INMSG_UTIME                           => 0xf8, 0x95
+        INMSG_VALUE                           => 0xf8, 0x97
+        INMSG_VALUEEXTRA                      => 0xf8, 0x98
+
+        GETEXTRABALANCE                       => 0xf8, 0x80
+        BTOS                                  => 0xCF, 0x50
+        HASHBU                                => 0xF9, 0x16
     }
 
     fn add_commands<'a>(
