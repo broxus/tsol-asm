@@ -2,7 +2,7 @@
 build = 'build.rs'
 edition = '2021'
 name = 'tsol-asm'
-version = '1.10.0'
+version = '1.10.1'
 
 [dependencies]
 anyhow = '1.0'

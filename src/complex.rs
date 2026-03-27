@@ -1200,7 +1200,7 @@ fn compile_inline_computed_cell(
     // initialize and run vm
     let mut vm = VmState::builder()
         .with_code(code)
-        .with_gas(GasParams::getter())
+        .with_gas(GasParams::unlimited())
         .build();
     let exit_code = !vm.run();
     if exit_code != 0 {
